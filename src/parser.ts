@@ -14,13 +14,13 @@ export const getUpdatedConfigNote = (
   config: string | null,
   after: string | null
 ) => {
-  let repl = "$1```kanban";
-  if (config) repl += "\n" + config;
-  else repl += "$2";
-  repl += "```";
-  if (after) repl += "\n" + after;
-  else repl += "$3";
-  return oldBody.replace(configRegex, repl);
+  return oldBody.replace(configRegex, (_, before, oldConfig, oldAfter) =>
+    before +
+    "```kanban" +
+    (config ? "\n" + config : oldConfig) +
+    "```" +
+    (after ? "\n" + after : oldAfter)
+  );
 };
 
 /**

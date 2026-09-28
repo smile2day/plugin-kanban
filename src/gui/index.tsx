@@ -48,6 +48,15 @@ function MessageBox({
 
 function App() {
   const [board, dispatch] = useRemoteBoard();
+  const closeButton = (
+    <CloseButton
+      type="button"
+      aria-label="Close Kanban panel"
+      onClick={() => dispatch({ type: "close" })}
+    >
+      <IoMdClose size="20px" />
+    </CloseButton>
+  );
   const notesToShow = board?.columns?.map((col) => ({
     ...col,
     notes: col.notes.map((note) => ({
@@ -59,13 +68,7 @@ function App() {
   const cont = board ? (
     <Container>
       <Header>
-        <IconCont
-          onClick={() => {
-            dispatch({ type: "close" })
-          }}
-        >
-            <IoMdClose size="20px"/>
-        </IconCont>
+        {closeButton}
         {board.name}
         <IconCont
           onClick={() =>
@@ -108,7 +111,12 @@ function App() {
       )}
     </Container>
   ) : (
-    <h1>Loading...</h1>
+    <Container>
+      <Header>
+        {closeButton}
+        Loading...
+      </Header>
+    </Container>
   );
 
   return (
@@ -164,6 +172,22 @@ const IconCont = styled("div")({
     width: "1.3em",
     height: "1.3em",
     color: "var(--joplin-color3)",
+  },
+});
+
+const CloseButton = styled("button")({
+  margin: "auto 0.1em",
+  padding: "0.1em",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  border: 0,
+  borderRadius: "5px",
+  background: "transparent",
+  color: "var(--joplin-color3)",
+  cursor: "pointer",
+  "&:hover": {
+    backgroundColor: "var(--joplin-background-color-hover3)",
   },
 });
 

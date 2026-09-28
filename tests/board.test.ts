@@ -1,4 +1,4 @@
-import { getYamlConfig } from "../src/parser";
+import { getUpdatedConfigNote, getYamlConfig } from "../src/parser";
 import Board from "../src/board";
 import type { BoardState, NoteData } from "../src/types";
 
@@ -41,6 +41,17 @@ filters:
   tag: task
 `;
 const testConfigBody = fenceConf(testConfig);
+
+it("keeps dollar sequences literal when updating a config note", () => {
+  const oldBody = "Before\n```kanban\ncolumns: []\n```\nAfter";
+  const newConfig = "columns:\n  - name: '$& $1 $$'\n";
+  const newAfter = "[Note $& $1 $$](:/note-id)";
+
+  expect(getUpdatedConfigNote(oldBody, newConfig, newAfter)).toBe(
+    `Before\n${fenceConf(newConfig)}\n${newAfter}`
+  );
+  expect(getUpdatedConfigNote(oldBody, null, null)).toBe(oldBody);
+});
 
 const mockTime = 1624713576;
 

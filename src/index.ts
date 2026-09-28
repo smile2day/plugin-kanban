@@ -140,6 +140,10 @@ async function reloadConfig(noteId: string) {
  * Almost all changes to the state occur in this method.
  */
 async function handleKanbanMessage(msg: Action) {
+  if (msg.type === "close") {
+    openBoard = undefined;
+    return hideBoard();
+  }
   if (!openBoard) return;
 
   switch (msg.type) {
@@ -218,10 +222,6 @@ async function handleKanbanMessage(msg: Action) {
     // New state is sent in any case, so load is a no-op
     case "load":
       break;
-
-    case "close":
-      openBoard = undefined;
-      return hideBoard();
 
     // Propagete action to the active board
     default: {

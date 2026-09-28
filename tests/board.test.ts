@@ -48,7 +48,7 @@ it("keeps dollar sequences literal when updating a config note", () => {
   const newAfter = "[Note $& $1 $$](:/note-id)";
 
   expect(getUpdatedConfigNote(oldBody, newConfig, newAfter)).toBe(
-    `Before\n${fenceConf(newConfig)}\n${newAfter}`
+    "Before\n```kanban\n" + newConfig + "```\n" + newAfter
   );
   expect(getUpdatedConfigNote(oldBody, null, null)).toBe(oldBody);
 });

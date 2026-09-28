@@ -14,7 +14,6 @@ import {
 } from "./noteData";
 import { getRuleEditorTypes } from "./rules";
 import { getMdList, getMdTable } from "./markdown";
-import { pushUpdate, waitForUpdate } from "./pusUpdate";
 
 import type { Action } from "./actions";
 import type { ConfigUIData } from "./configui";
@@ -86,6 +85,7 @@ let boardView: string | undefined;
 async function showBoard() {
   if (!boardView) {
     boardView = await joplin.views.panels.create("kanban");
+    await joplin.views.panels.onMessage(boardView, handleKanbanMessage);
     // Template tags seem to be the easiest way to pass static data to a view
     // If a better way is found, this should be changed
     const html = `
@@ -98,17 +98,21 @@ async function showBoard() {
     await joplin.views.panels.setHtml(boardView, html);
     await joplin.views.panels.addScript(boardView, "gui/main.css");
     await joplin.views.panels.addScript(boardView, "gui/index.js");
-    joplin.views.panels.onMessage(boardView, handleKanbanMessage);
   } else if (!(await joplin.views.panels.visible(boardView))) {
     await joplin.views.panels.show(boardView);
   }
+  pushUpdate();
+}
+
+function pushUpdate() {
+  if (boardView) joplin.views.panels.postMessage(boardView, { type: "refresh" });
 }
 
 /**
  * Hides the active kanban panel.
  */
-function hideBoard() {
-  if (boardView) joplin.views.panels.hide(boardView);
+async function hideBoard() {
+  if (boardView) await joplin.views.panels.hide(boardView);
 }
 
 // CONFIG HANDLING
@@ -148,9 +152,6 @@ async function handleKanbanMessage(msg: Action) {
 
   switch (msg.type) {
     case "poll": {
-      console.log("got poll");
-      await waitForUpdate();
-      console.log("replying poll");
       break;
     }
 
@@ -210,7 +211,7 @@ async function handleKanbanMessage(msg: Action) {
       newNoteChangedCb = async (noteId: string) => {
         if (!openBoard || !openBoard.isValid) return;
         msg.payload.noteId = noteId;
-        const allNotesOld = await searchNotes(openBoard.rootNotebookName);
+        const allNotesOld = await searchNotes(openBoard.rootNotebookName, openBoard.searchTag);
         const oldState: BoardState = await openBoard.getBoardState(allNotesOld);
         for (const query of openBoard.getBoardUpdate(msg, oldState)) {
           await executeUpdateQuery(query);
@@ -226,7 +227,7 @@ async function handleKanbanMessage(msg: Action) {
     // Propagete action to the active board
     default: {
       if (!openBoard.isValid) break;
-      const allNotesOld = await searchNotes(openBoard.rootNotebookName);
+      const allNotesOld = await searchNotes(openBoard.rootNotebookName, openBoard.searchTag);
       const oldState: BoardState = await openBoard.getBoardState(allNotesOld);
       const updates = openBoard.getBoardUpdate(msg, oldState);
       for (const query of updates) {
@@ -235,11 +236,14 @@ async function handleKanbanMessage(msg: Action) {
     }
   }
 
-  const allNotesNew = await searchNotes(openBoard.rootNotebookName);
-  const newState: BoardState = await openBoard.getBoardState(allNotesNew);
+  const board = openBoard;
+  if (!board) return;
+  const allNotesNew = await searchNotes(board.rootNotebookName, board.searchTag);
+  const newState: BoardState = await board.getBoardState(allNotesNew);
   const currentYaml = getYamlConfig(
-    (await getConfigNote(openBoard.configNoteId)).body
+    (await getConfigNote(board.configNoteId)).body
   );
+  if (openBoard !== board) return;
   if (currentYaml !== openBoard.configYaml) {
     if (!currentYaml) return hideBoard();
     const { error } = parseConfigNote(currentYaml);
@@ -278,15 +282,14 @@ async function handleKanbanMessage(msg: Action) {
 async function handleNewlyOpenedNote(newNoteId: string) {
 
   if (openBoard) {
-    if (openBoard.configNoteId === newNoteId) return;
+    if (openBoard.configNoteId === newNoteId) return showBoard();
     if (await openBoard.isNoteIdOnBoard(newNoteId)) return;
     else {
       const originalOpenBoard = openBoard;
       await reloadConfig(newNoteId);
       if (openBoard && openBoard.isValid && originalOpenBoard!==openBoard) {
         // If user opened a new board, close and open again to refresh the content
-        hideBoard()
-        showBoard();
+        await showBoard();
       }
       return;
     }
@@ -295,7 +298,7 @@ async function handleNewlyOpenedNote(newNoteId: string) {
   if (!openBoard || (openBoard as Board).configNoteId !== newNoteId) {
     await reloadConfig(newNoteId);
     if (openBoard) {
-      showBoard();
+      await showBoard();
     }
   }
 }
@@ -303,19 +306,20 @@ async function handleNewlyOpenedNote(newNoteId: string) {
 joplin.plugins.register({
   onStart: async function () {
     // Have to call this on start otherwise layout from prevoius session is lost
-    showBoard().then(hideBoard);
+    await showBoard();
+    await hideBoard();
 
     let startedHandlingNewNote = false;
-    joplin.workspace.onNoteSelectionChange(
+    await joplin.workspace.onNoteSelectionChange(
       async ({ value }: { value: [string?] }) => {
         const newNoteId = value?.[0] as string;
         if (newNoteChangedCb && (await getNoteById(newNoteId)))
           newNoteChangedCb = undefined;
-        if (newNoteId) handleNewlyOpenedNote(newNoteId);
+        if (newNoteId) await handleNewlyOpenedNote(newNoteId);
       }
     );
 
-    joplin.workspace.onNoteChange(async ({ id }) => {
+    await joplin.workspace.onNoteChange(async ({ id }) => {
       if (!openBoard) return;
       if (openBoard.configNoteId === id) {
         if (!openBoard.isValid) await reloadConfig(id);
@@ -336,5 +340,7 @@ joplin.plugins.register({
         pushUpdate();
       }
     });
+    const selectedNote = await joplin.workspace.selectedNote();
+    if (selectedNote) await handleNewlyOpenedNote(selectedNote.id);
   },
 });

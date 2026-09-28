@@ -158,6 +158,16 @@ describe("Board", () => {
     expect(board.rootNotebookName).toBe(nbName);
   });
 
+  it("uses a required positive tag to narrow the note search", async () => {
+    const board = await createBoard({
+      id: "testid",
+      title: "testname",
+      body: testConfigBody,
+      parent_id: parentNb,
+    });
+    expect(board?.searchTag).toBe("task");
+  });
+
   describe("columnNames", () => {
     it("should contain name of each column", async () => {
       const board = (await createBoard({

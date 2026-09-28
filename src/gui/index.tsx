@@ -126,8 +126,6 @@ function App() {
   );
 }
 
-render(<App />, document.getElementById("root"));
-
 const Container = styled("div")({
   display: "flex",
   flexDirection: "column",
@@ -238,3 +236,5 @@ const MessageDetail = styled("code")({
   paddingTop: "15px",
   whiteSpace: "pre-wrap",
 });
+
+render(<App />, document.getElementById("root"));

@@ -51,6 +51,9 @@ export default class Board {
    */
   public rootNotebookName = "";
 
+  /** A required positive tag that can narrow the initial Joplin search. */
+  public searchTag: string | undefined;
+
   /**
    * List of tags that should not be displayed on cards. We include
    * tags here which are part of filters, because they would show up
@@ -85,6 +88,7 @@ export default class Board {
    */
   private reset() {
     this.rootNotebookName = "";
+    this.searchTag = undefined;
     this.hiddenTags = [];
     this.columnNames = [];
     this.errorMessages = [];
@@ -117,6 +121,15 @@ export default class Board {
     const { rootNotebookPath = await getNotebookPath(this.boardNotebookId) } =
       configObj.filters || {};
     this.rootNotebookName = rootNotebookPath.split("/").pop() as string;
+    const requiredTag = configObj.filters?.tag;
+    if (
+      typeof requiredTag === "string" &&
+      requiredTag.length > 0 &&
+      !requiredTag.startsWith("-") &&
+      !requiredTag.includes('"')
+    ) {
+      this.searchTag = requiredTag;
+    }
 
     this.baseFilters = [
       // Exclude the config note

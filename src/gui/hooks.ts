@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 
-import type { NoteData, Message, BoardState } from "../types";
+import type { BoardState } from "../types";
 import type { Action } from "../actions";
 
 interface State {
@@ -11,31 +11,41 @@ export type DispatchFn = (action: Action) => Promise<void>;
 
 export function useRemoteBoard(): [BoardState | undefined, DispatchFn] {
   const [state, setState] = useState<State>({});
+  const active = useRef(true);
+  const requestId = useRef(0);
 
   const dispatch: DispatchFn = useCallback(async (action: Action) => {
-    const newBoard: BoardState = await webviewApi.postMessage(action);
-    setState({ board: newBoard });
-  }, []);
-
-  const shouldPoll = useRef(true);
-  const poll = () => {
-    webviewApi.postMessage({ type: "poll" }).then((newBoard: BoardState) => {
-      if (!newBoard) {
-        shouldPoll.current = false;
-      } else {
-        setState({ board: newBoard });
-        if (shouldPoll.current === true) poll();
+    const id = ++requestId.current;
+    try {
+      const newBoard: BoardState = await webviewApi.postMessage(action);
+      if (active.current && id === requestId.current) setState({ board: newBoard });
+    } catch (error) {
+      if (active.current && id === requestId.current) {
+        setState({ board: {
+          name: "Kanban",
+          hiddenTags: [],
+          messages: [{
+            id: "loadError",
+            severity: "error",
+            title: "Unable to load the board",
+            details: String(error),
+            actions: [],
+          }],
+        } });
       }
-    });
-  };
+    }
+  }, []);
 
   useEffect(() => {
+    active.current = true;
+    webviewApi.onMessage(() => {
+      if (active.current) dispatch({ type: "poll" });
+    });
     dispatch({ type: "load" });
-    poll();
     return () => {
-      shouldPoll.current = false;
+      active.current = false;
     };
-  }, []);
+  }, [dispatch]);
 
   return [state.board, dispatch];
 }

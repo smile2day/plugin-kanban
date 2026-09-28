@@ -1,6 +1,11 @@
 > [!WARNING]  
 > This plugin now is deprecated in favour of the YesYouKan plugin. More information here: https://github.com/joplin/plugin-kanban/issues/57
 
+## Note about this fork
+
+* Fixed the panel becoming stuck with "Loading ..." message - carried out with GPT-6 Sol and Astra. 
+* No further plans to maintianthos fork since I am going to migrate to YesYouKan - smile2day
+
 # Joplin Kanban Plugin
 
 This a plugin for the note taking app [Joplin](https://joplinapp.org/), which adds a flexible kanban board view for your notes, to help you organize your tasks.

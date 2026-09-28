@@ -4,7 +4,7 @@
 ## Note about this fork
 
 * Fixed the panel becoming stuck with "Loading ..." message - carried out with GPT-6 Sol and Astra. 
-* No further plans to maintianthos fork since I am going to migrate to YesYouKan - smile2day
+* No further plans maintaining this fork since I am going to migrate to YesYouKan - smile2day
 
 # Joplin Kanban Plugin
 
